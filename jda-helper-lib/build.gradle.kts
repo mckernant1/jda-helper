@@ -8,7 +8,15 @@
 plugins {
     kotlin("jvm") version "1.9.0"
     id("com.google.devtools.ksp") version "1.9.0-1.0.13"
+    `maven-publish`
+    `java-library`
+    signing
 }
+
+val projectName = "jda-helper"
+
+group = "com.mckernant1.jda"
+version = "0.0.1"
 
 repositories {
     // Use Maven Central for resolving dependencies.
@@ -17,10 +25,11 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
-    api(project(":annotations"))
+    implementation(project(":annotations"))
     ksp(project(":annotations"))
     implementation("net.dv8tion:JDA:5.0.2")
     testImplementation(libs.junit.jupiter.engine)
+    testImplementation("org.mockito:mockito-core:5.15.2")
 }
 
 kotlin {
@@ -39,4 +48,51 @@ java {
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+}
+
+publishing {
+    repositories {
+        maven {
+            url = uri("s3://mvn.mckernant1.com/release")
+            authentication {
+                register("awsIm", AwsImAuthentication::class.java)
+            }
+        }
+    }
+
+    publications {
+        create<MavenPublication>("default") {
+            artifactId = projectName
+            from(components["kotlin"])
+            val sourcesJar by tasks.registering(Jar::class) {
+                val sourceSets: SourceSetContainer by project
+                from(sourceSets["main"].allSource)
+                archiveClassifier.set("sources")
+            }
+            artifact(sourcesJar)
+            pom {
+                name.set(projectName)
+                description.set("")
+                url.set("https://github.com/mckernant1/$projectName")
+                licenses {
+                    license {
+                        name.set("The Apache License, Version 2.0")
+                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("mckernant1")
+                        name.set("Tom McKernan")
+                        email.set("tmeaglei@gmail.com")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:git://github.com/mckernant1/$projectName.git")
+                    developerConnection.set("scm:git:ssh://github.com/mckernant1/$projectName.git")
+                    url.set("https://github.com/mckernant1/$projectName")
+                }
+            }
+        }
+    }
 }

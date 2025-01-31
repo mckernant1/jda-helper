@@ -19,6 +19,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.ksp.toClassName
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import java.io.OutputStreamWriter
@@ -61,9 +62,12 @@ class CommandProcessor(
                 .returns(CommandData::class)
             functionSpec.addStatement("val c = CommandDataImpl(\"${command?.name}\",\"${command?.description}\")")
 
+            val sb = StringBuilder()
+            val l = mutableListOf<String>()
             classDeclaration.getAllProperties()
                 .forEach { property ->
-                    val optionAnnotation = property.getAnnotationsByType(Option::class).firstOrNull() ?: return@forEach
+                    val optionAnnotation = property.getAnnotationsByType(Option::class)
+                        .firstOrNull() ?: return@forEach
                     functionSpec.addStatement(
                         "c.addOption(%T.%L, %S, %S, %L)",
                         ClassName("net.dv8tion.jda.api.interactions.commands", "OptionType"),
@@ -72,15 +76,43 @@ class CommandProcessor(
                         optionAnnotation.description,
                         optionAnnotation.required
                     )
-
+                    val s = when (optionAnnotation.type) {
+                        OptionType.STRING -> "getOption(%S)!!.asString"
+                        OptionType.INTEGER -> "getOption(%S)!!.asInt"
+                        OptionType.BOOLEAN -> "getOption(%S)!!.asBoolean"
+                        OptionType.USER -> "getOption(%S)!!.asUser"
+                        OptionType.CHANNEL -> "getOption(%S)!!.asChannel"
+                        OptionType.ROLE -> "getOption(%S)!!.asRole"
+                        OptionType.MENTIONABLE -> "getOption(%S)!!.asMentionable"
+                        OptionType.NUMBER -> "getOption(%S)!!.asDouble"
+                        OptionType.ATTACHMENT -> "getOption(%S)!!.asAttachment"
+                        else -> throw IllegalArgumentException("Unknown option type ${optionAnnotation.type}")
+                    }
+                    sb.appendLine("%L = $s,")
+                    l.add(property.simpleName.asString())
+                    l.add(optionAnnotation.name)
                 }
 
             functionSpec.addStatement("return c")
 
 
+            val toCommandDataFuncSpec = FunSpec.builder("toCommandData")
+                .receiver(SlashCommandInteractionEvent::class)
+                .returns(ClassName(packageName, className))
+
+            toCommandDataFuncSpec.addStatement("""
+                return %T(
+                    $sb
+                )
+            """.trimIndent(), classType, *l.toTypedArray())
+
+
+
+
             val fileSpec = FileSpec.builder(packageName, "${className}Generated")
                 .addImport("net.dv8tion.jda.internal.interactions", "CommandDataImpl")
                 .addFunction(functionSpec.build())
+                .addFunction(toCommandDataFuncSpec.build())
                 .build()
 
             // Write the generated file
