@@ -16,7 +16,7 @@ plugins {
 val projectName = "annotations"
 
 group = "com.mckernant1.jda"
-version = "0.0.2"
+version = "0.0.3"
 
 repositories {
     mavenCentral()
