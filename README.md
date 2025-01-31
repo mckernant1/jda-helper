@@ -19,7 +19,7 @@ data class TestCommand(
     )
     val testOption: String,
 ) {
-    companion object {}
+    companion object
 }
 ```
 
