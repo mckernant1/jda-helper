@@ -100,7 +100,7 @@ class CommandProcessor(
 
             functionSpec.addStatement("return c")
 
-            val toCommandDataFuncSpec = FunSpec.builder("toCommandData")
+            val toCommandDataFuncSpec = FunSpec.builder("to${className}")
                 .receiver(SlashCommandInteractionEvent::class)
                 .returns(ClassName(packageName, className))
 
@@ -110,7 +110,10 @@ class CommandProcessor(
                 .addImport("net.dv8tion.jda.api.interactions.commands.build", "Commands")
                 .addFunction(functionSpec.build())
                 .addFunction(toCommandDataFuncSpec.build())
-                .build()
+
+            if (classType.enclosingClassName() != null) {
+                fileSpec.addImport(classType.enclosingClassName()!!, className)
+            }
 
             // Write the generated file
             val file = codeGenerator.createNewFile(
@@ -120,7 +123,7 @@ class CommandProcessor(
             )
 
             OutputStreamWriter(file).use { writer ->
-                fileSpec.writeTo(writer)
+                fileSpec.build().writeTo(writer)
             }
         }
     }

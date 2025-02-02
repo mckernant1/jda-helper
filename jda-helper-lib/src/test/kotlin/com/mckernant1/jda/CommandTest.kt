@@ -70,7 +70,7 @@ class CommandTest {
         `when`(testMentionableMapping.asMentionable).thenReturn(mock())
         `when`(slash.getOption("test-mentionable")).thenReturn(testMentionableMapping)
 
-        val testCommand = slash.toCommandData()
+        val testCommand = slash.toTestCommand()
 
         assertEquals("testResult", testCommand.testString)
         assertEquals("optionalDefault", testCommand.testStringOptional)
